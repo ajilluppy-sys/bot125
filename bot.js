@@ -58,7 +58,7 @@ client.on('guildMemberAdd', async (member) => {
         .setTitle('🚨 Akun Baru Terdeteksi')
         .setDescription('──────────────────────')
         .addFields(
-          { name: '👤 User', value: `${member.user.tag}`, inline: true },
+          { name: '👤 User', value: `<@${member.user.id}>`, inline: true },
           { name: '🆔 ID', value: `${member.user.id}`, inline: true },
           { name: '📅 Usia Akun', value: `${usiaJam} jam ${usiaMenit} menit`, inline: true },
           { name: '⏳ Cooldown', value: `~${sisaMenit} menit lagi`, inline: true },
@@ -85,12 +85,12 @@ client.on('guildMemberAdd', async (member) => {
         const memberRole = member.guild.roles.cache.find(r => r.name === MEMBER_ROLE_NAME);
         if (memberRole) await member.roles.add(memberRole);
         if (logChannel) {
-          logChannel.send(`✅ **${member.user.tag}** sudah dipromosikan otomatis ke **${MEMBER_ROLE_NAME}**!`);
+          logChannel.send(`✅ **<@${member.user.id}>** sudah dipromosikan otomatis ke **${MEMBER_ROLE_NAME}**!`);
         }
       } catch (e) {}
     }, sisaWaktuMs);
 
-    console.log(`${member.user.tag} — NewDiscord (akun ${usiaJam} jam ${usiaMenit} menit).`);
+    console.log(`<@${member.user.id}> — NewDiscord (akun ${usiaJam} jam ${usiaMenit} menit).`);
 
   // ===== AKUN LAMA TAPI BARU JOIN =====
   } else {
@@ -101,7 +101,7 @@ client.on('guildMemberAdd', async (member) => {
         .setTitle('🔍 Akun Lama Baru Join')
         .setDescription('──────────────────────')
         .addFields(
-          { name: '👤 User', value: `${member.user.tag}`, inline: true },
+          { name: '👤 User', value: `<@${member.user.id}>`, inline: true },
           { name: '🆔 ID', value: `${member.user.id}`, inline: true },
           { name: '📅 Usia Akun', value: `${usiaHari} hari`, inline: true },
           { name: '🟡 Status', value: '⏳ Menunggu verifikasi admin', inline: false },
@@ -156,7 +156,7 @@ client.on('interactionCreate', async (interaction) => {
       .setColor(0x3ba55c)
       .setAuthor({ name: 'BOT125 Security System', iconURL: client.user.displayAvatarURL() })
       .setTitle('✅ Member Diapprove')
-      .setDescription(`**${member.user.tag}** telah diverifikasi dan mendapat role **${MEMBER_ROLE_NAME}**.`)
+      .setDescription(`**<@${member.user.id}>** telah diverifikasi dan mendapat role **${MEMBER_ROLE_NAME}**.`)
       .addFields({ name: '👮 Diapprove oleh', value: `${interaction.user.tag}` })
       .setThumbnail(client.user.displayAvatarURL())
       .setFooter({ text: 'BOT125 Security', iconURL: client.user.displayAvatarURL() })
@@ -175,7 +175,7 @@ client.on('interactionCreate', async (interaction) => {
       .setColor(0xed4245)
       .setAuthor({ name: 'Bot125 Security System', iconURL: client.user.displayAvatarURL() })
       .setTitle('❌ Member Direject')
-      .setDescription(`**${member.user.tag}** telah ditolak dan dikeluarkan dari server.`)
+      .setDescription(`**<@${member.user.id}>** telah ditolak dan dikeluarkan dari server.`)
       .addFields({ name: '👮 Direject oleh', value: `${interaction.user.tag}` })
       .setThumbnail(client.user.displayAvatarURL())
       .setFooter({ text: 'Bot125 Security', iconURL: client.user.displayAvatarURL() })
