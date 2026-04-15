@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 
 const client = new Client({
   intents: [
@@ -12,7 +12,8 @@ const TOKEN = process.env.TOKEN;
 const QUARANTINE_ROLE_NAME = 'NewDiscord';
 const MEMBER_ROLE_NAME = 'Player Verify';
 const LOG_CHANNEL_NAME = 'bot125-log';
-const MIN_AGE_MS = 1 * 60 * 60 * 1000; // 1 jam
+const MIN_AGE_MS = 2 * 60 * 60 * 1000;        // 2 jam (akun dianggap "baru")
+const OLD_ACCOUNT_WAIT_MS = 1 * 60 * 60 * 1000; // 1 jam tunggu untuk akun lama
 // =======================
 
 client.once('ready', () => {
@@ -45,7 +46,7 @@ client.on('guildMemberAdd', async (member) => {
     );
   }
 
-  // ===== AKUN BARU =====
+  // ===== AKUN BARU (< 2 jam) =====
   if (accountAge < MIN_AGE_MS) {
     const sisaWaktuMs = MIN_AGE_MS - accountAge;
     const sisaJam = Math.ceil(sisaWaktuMs / (60 * 60 * 1000));
@@ -58,7 +59,7 @@ client.on('guildMemberAdd', async (member) => {
         .setTitle('🚨 Akun Baru Terdeteksi')
         .setDescription('──────────────────────')
         .addFields(
-          { name: '👤 User', value: `<@${member.user.id}>`, inline: true },
+          { name: '👤 User', value: `${member.user.tag}`, inline: true },
           { name: '🆔 ID', value: `${member.user.id}`, inline: true },
           { name: '📅 Usia Akun', value: `${usiaJam} jam ${usiaMenit} menit`, inline: true },
           { name: '⏳ Cooldown', value: `~${sisaMenit} menit lagi`, inline: true },
@@ -85,14 +86,14 @@ client.on('guildMemberAdd', async (member) => {
         const memberRole = member.guild.roles.cache.find(r => r.name === MEMBER_ROLE_NAME);
         if (memberRole) await member.roles.add(memberRole);
         if (logChannel) {
-          logChannel.send(`✅ **<@${member.user.id}>** sudah dipromosikan otomatis ke **${MEMBER_ROLE_NAME}**!`);
+          logChannel.send(`✅ **${member.user.tag}** sudah dipromosikan otomatis ke **${MEMBER_ROLE_NAME}**!`);
         }
       } catch (e) {}
     }, sisaWaktuMs);
 
-    console.log(`<@${member.user.id}> — NewDiscord (akun ${usiaJam} jam ${usiaMenit} menit).`);
+    console.log(`${member.user.tag} — NewDiscord (akun ${usiaJam} jam ${usiaMenit} menit).`);
 
-  // ===== AKUN LAMA TAPI BARU JOIN =====
+  // ===== AKUN LAMA TAPI BARU JOIN — AUTO PROMOTE setelah 1 jam =====
   } else {
     if (logChannel) {
       const embed = new EmbedBuilder()
@@ -101,87 +102,38 @@ client.on('guildMemberAdd', async (member) => {
         .setTitle('🔍 Akun Lama Baru Join')
         .setDescription('──────────────────────')
         .addFields(
-          { name: '👤 User', value: `<@${member.user.id}>`, inline: true },
+          { name: '👤 User', value: `${member.user.tag}`, inline: true },
           { name: '🆔 ID', value: `${member.user.id}`, inline: true },
           { name: '📅 Usia Akun', value: `${usiaHari} hari`, inline: true },
-          { name: '🟡 Status', value: '⏳ Menunggu verifikasi admin', inline: false },
+          { name: '🟡 Status', value: '⏳ Akan otomatis dipromosikan dalam 1 jam', inline: false },
         )
         .setThumbnail(client.user.displayAvatarURL())
         .setFooter({ text: 'BOT125 Security', iconURL: client.user.displayAvatarURL() })
         .setTimestamp();
 
-      const row = new ActionRowBuilder()
-        .addComponents(
-          new ButtonBuilder()
-            .setCustomId(`approve_${member.user.id}`)
-            .setLabel('✅ Approve')
-            .setStyle(ButtonStyle.Success),
-          new ButtonBuilder()
-            .setCustomId(`reject_${member.user.id}`)
-            .setLabel('❌ Reject')
-            .setStyle(ButtonStyle.Danger),
-        );
-
-      logChannel.send({ embeds: [embed], components: [row] });
+      logChannel.send({ embeds: [embed] });
     }
 
     try {
       await member.send(
-        `Halo! Akunmu sedang dalam proses verifikasi admin.\n` +
-        `Mohon tunggu sebentar, admin akan segera memeriksa akunmu. Terima kasih!`
+        `Halo! Akunmu sedang dalam masa verifikasi.\n` +
+        `Kamu akan otomatis mendapat akses penuh dalam **1 jam**. Terima kasih sudah bersabar!`
       );
     } catch (e) {}
-  }
-});
 
-// ===== HANDLE TOMBOL APPROVE / REJECT =====
-client.on('interactionCreate', async (interaction) => {
-  if (!interaction.isButton()) return;
-
-  const [action, userId] = interaction.customId.split('_');
-  const member = await interaction.guild.members.fetch(userId).catch(() => null);
-
-  if (!member) {
-    return interaction.reply({ content: '❌ Member tidak ditemukan atau sudah keluar.', ephemeral: true });
-  }
-
-  const newDiscordRole = interaction.guild.roles.cache.find(r => r.name === QUARANTINE_ROLE_NAME);
-  const memberRole = interaction.guild.roles.cache.find(r => r.name === MEMBER_ROLE_NAME);
-
-  if (action === 'approve') {
-    if (newDiscordRole) await member.roles.remove(newDiscordRole);
-    if (memberRole) await member.roles.add(memberRole);
-
-    const embed = new EmbedBuilder()
-      .setColor(0x3ba55c)
-      .setAuthor({ name: 'BOT125 Security System', iconURL: client.user.displayAvatarURL() })
-      .setTitle('✅ Member Diapprove')
-      .setDescription(`**<@${member.user.id}>** telah diverifikasi dan mendapat role **${MEMBER_ROLE_NAME}**.`)
-      .addFields({ name: '👮 Diapprove oleh', value: `${interaction.user.tag}` })
-      .setThumbnail(client.user.displayAvatarURL())
-      .setFooter({ text: 'BOT125 Security', iconURL: client.user.displayAvatarURL() })
-      .setTimestamp();
-
-    await interaction.update({ embeds: [embed], components: [] });
-
-    try {
-      await member.send(`Akunmu telah diverifikasi oleh admin! Kamu sekarang bisa akses server penuh. Selamat bermain! 🎮`);
-    } catch (e) {}
-
-  } else if (action === 'reject') {
-    await member.kick('Ditolak oleh admin saat verifikasi.');
-
-    const embed = new EmbedBuilder()
-      .setColor(0xed4245)
-      .setAuthor({ name: 'Bot125 Security System', iconURL: client.user.displayAvatarURL() })
-      .setTitle('❌ Member Direject')
-      .setDescription(`**<@${member.user.id}>** telah ditolak dan dikeluarkan dari server.`)
-      .addFields({ name: '👮 Direject oleh', value: `${interaction.user.tag}` })
-      .setThumbnail(client.user.displayAvatarURL())
-      .setFooter({ text: 'Bot125 Security', iconURL: client.user.displayAvatarURL() })
-      .setTimestamp();
-
-    await interaction.update({ embeds: [embed], components: [] });
+    setTimeout(async () => {
+      try {
+        const memberRole = member.guild.roles.cache.find(r => r.name === MEMBER_ROLE_NAME);
+        await member.roles.remove(newDiscordRole);
+        if (memberRole) await member.roles.add(memberRole);
+        if (logChannel) {
+          logChannel.send(`✅ **${member.user.tag}** sudah dipromosikan otomatis ke **${MEMBER_ROLE_NAME}**!`);
+        }
+        try {
+          await member.send(`Verifikasi selesai! Kamu sekarang bisa akses server penuh. Selamat bermain! 🎮`);
+        } catch (e) {}
+      } catch (e) {}
+    }, OLD_ACCOUNT_WAIT_MS);
   }
 });
 
